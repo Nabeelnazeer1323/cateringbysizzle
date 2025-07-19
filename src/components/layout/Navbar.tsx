@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, User, LogOut, ShoppingCart, Settings, PackageSearch, ChevronDown } from "lucide-react";
+import { Menu, User, LogOut, ShoppingCart, Settings, PackageSearch } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,7 +49,6 @@ const Navbar = () => {
                       <NavigationMenuTrigger className="flex items-center gap-2">
                         <User className="h-4 w-4 text-orange-600" />
                         My Account
-                        <ChevronDown className="h-4 w-4 text-orange-600" />
                       </NavigationMenuTrigger>
                       <NavigationMenuContent>
                         <ul className="w-[200px] p-3 space-y-2">
