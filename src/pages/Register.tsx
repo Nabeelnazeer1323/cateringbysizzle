@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Form } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { registerFormSchema, type RegisterFormValues } from "@/lib/validations/register";
 import { PersonalInfoFields } from "@/components/auth/PersonalInfoFields";
 import { SecurityFields } from "@/components/auth/SecurityFields";
