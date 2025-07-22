@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -9,42 +9,77 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { registerFormSchema, type RegisterFormValues } from "@/lib/validations/register";
 import { PersonalInfoFields } from "@/components/auth/PersonalInfoFields";
 import { SecurityFields } from "@/components/auth/SecurityFields";
 import { TermsCheckbox } from "@/components/auth/TermsCheckbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreateCompanyForm } from "@/components/company/CreateCompanyForm";
+import { JoinCompanySection } from "@/components/company/JoinCompanySection";
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { signUp } = useAuth();
+  const { signUpAndSetupCompany, user } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerFormSchema),
+    navigate("/order");
     defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
       phone: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      companyAction: "create",
+      newCompanyName: "",
+      newCompanyAddress: "",
+      newOrganizationNumber: "",
+      existingCompanyId: ""
     }
   });
+
+  // Watch the companyAction to reset relevant fields when switching tabs
+  const companyAction = form.watch("companyAction");
+  
+  useEffect(() => {
+    if (companyAction === "create") {
+      form.setValue("existingCompanyId", "");
+    } else if (companyAction === "join") {
+      form.setValue("newCompanyName", "");
+      form.setValue("newCompanyAddress", "");
+      form.setValue("newOrganizationNumber", "");
+    }
+  }, [companyAction, form]);
 
   const handleSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      const { error, userId } = await signUp(values.email, values.password, {
+      const personalData = {
         firstName: values.firstName,
         lastName: values.lastName,
         phone: values.phone
-      });
+      };
+
+      const companyData = {
+        companyAction: values.companyAction,
+        newCompanyName: values.newCompanyName,
+        newCompanyAddress: values.newCompanyAddress,
+        newOrganizationNumber: values.newOrganizationNumber,
+        existingCompanyId: values.existingCompanyId
+      };
+
+      const { error, userId } = await signUpAndSetupCompany(
+        values.email, 
+        values.password, 
+        personalData, 
+        companyData
+      );
 
       if (error) {
         setIsLoading(false);
-        return;
+        navigate("/order");
       }
 
       navigate("/company-registration");
@@ -76,6 +111,33 @@ const Register = () => {
                 <PersonalInfoFields form={form} />
                 <Separator />
                 <SecurityFields form={form} />
+                <Separator />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Company Setup</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    To continue, you must either join your company or create a new one.
+                  </p>
+                  
+                  <Tabs 
+                    value={companyAction} 
+                    onValueChange={(value) => form.setValue("companyAction", value as "create" | "join")}
+                  >
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="create">Create New Company</TabsTrigger>
+                      <TabsTrigger value="join">Join Existing Company</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="create">
+                      <CreateCompanyForm form={form} />
+                    </TabsContent>
+                    
+                    <TabsContent value="join">
+                      <JoinCompanySection form={form} />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+                
                 <TermsCheckbox />
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
@@ -84,7 +146,7 @@ const Register = () => {
                   disabled={isLoading} 
                   className="w-full bg-orange-600 hover:bg-orange-500"
                 >
-                  {isLoading ? "Creating Account..." : "Create Account"}
+                  {isLoading ? "Creating Account & Setting Up Company..." : "Create Account & Setup Company"}
                 </Button>
                 <p className="text-center text-sm text-gray-600">
                   Already have an account?{" "}

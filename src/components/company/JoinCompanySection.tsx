@@ -1,103 +1,47 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader } from "lucide-react";
+import { UseFormReturn } from "react-hook-form";
+import { RegisterFormValues } from "@/lib/validations/register";
 import { CompanySearch } from "@/components/CompanySearch";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader } from "lucide-react";
 
 interface JoinCompanySectionProps {
-  userId: string;
-  onSuccess: () => void;
+  form: UseFormReturn<RegisterFormValues>;
 }
 
-export const JoinCompanySection = ({ userId, onSuccess }: JoinCompanySectionProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [existingCompanies, setExistingCompanies] = useState<any[]>([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
-  const { toast } = useToast();
-
-  const joinExistingCompany = async (companyId: string) => {
-    if (!userId) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          company_id: companyId,
-          is_company_admin: false 
-        })
-        .eq('id', userId);
-
-      if (error) {
-        if (error.code === '42501') {
-          toast({
-            title: "Permission denied",
-            description: "You do not have permission to update this profile. (RLS policy blocked)",
-            variant: "destructive"
-          });
-        } else {
-          throw error;
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      toast({
-        title: "Success!",
-        description: "You've been successfully associated with the company.",
-      });
-      onSuccess();
-    } catch (error: any) {
-      console.error("Error joining company:", error);
-      toast({
-        title: "Failed to Join",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+export const JoinCompanySection = ({ form }: JoinCompanySectionProps) => {
+  const handleCompanySelect = (companyId: string) => {
+    form.setValue("existingCompanyId", companyId);
   };
   
   // Fetch initial list of companies
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      setIsLoadingCompanies(true);
-      try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('*')
-          .order('name')
-          .limit(5);
-        
-        if (error) throw error;
-        if (data) setExistingCompanies(data);
-      } catch (error: any) {
-        console.error('Error fetching companies:', error.message);
-        toast({
-          title: "Failed to load companies",
-          description: error.message,
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoadingCompanies(false);
-      }
-    };
-
-    fetchCompanies();
-  }, [toast]);
+  const { data: existingCompanies, isLoading: isLoadingCompanies } = useQuery({
+    queryKey: ['companies-for-join'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name')
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   return (
     <div className="space-y-4">
       <h3 className="font-medium">Search and select your company:</h3>
-      <CompanySearch onCompanySelect={joinExistingCompany} />
+      <CompanySearch onCompanySelect={handleCompanySelect} />
       
       {isLoadingCompanies ? (
         <div className="flex justify-center py-8">
           <Loader className="h-8 w-8 animate-spin text-orange-600" />
         </div>
-      ) : existingCompanies.length > 0 ? (
+      ) : existingCompanies && existingCompanies.length > 0 ? (
         <div className="mt-6">
           <h4 className="text-sm font-medium text-gray-500 mb-3">Or select from recently added companies:</h4>
           <div className="grid grid-cols-1 gap-3">
@@ -105,8 +49,8 @@ export const JoinCompanySection = ({ userId, onSuccess }: JoinCompanySectionProp
               <Button 
                 key={company.id}
                 variant="outline" 
-                onClick={() => joinExistingCompany(company.id)}
-                disabled={isLoading}
+                onClick={() => handleCompanySelect(company.id)}
+                disabled={false}
                 className="w-full justify-start h-auto py-3 text-left"
               >
                 <div>

@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any | null; userId?: string }>;
+  signUpAndSetupCompany: (email: string, password: string, personalData: any, companyData: any) => Promise<{ error: any | null; userId?: string }>;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   checkCompanyAssociation: () => Promise<boolean>;
@@ -71,6 +72,158 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       return { error: null, userId: data.user?.id };
+    } catch (error: any) {
+      toast({
+        title: "Unexpected error",
+        description: error.message,
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const signUpAndSetupCompany = async (email: string, password: string, personalData: any, companyData: any) => {
+    try {
+      // Step 1: Create the user account
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: personalData.firstName,
+            last_name: personalData.lastName,
+            phone: personalData.phone,
+          },
+        },
+      });
+      
+      if (error) {
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+
+      if (!data.user?.id) {
+        const userError = new Error("User creation failed - no user ID returned");
+        toast({
+          title: "Registration failed",
+          description: userError.message,
+          variant: "destructive",
+        });
+        return { error: userError };
+      }
+
+      const userId = data.user.id;
+
+      // Step 2: Wait a moment for the profiles trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 3: Handle company setup based on action
+      try {
+        if (companyData.companyAction === "create") {
+          // Create new company
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .insert([{
+              name: companyData.newCompanyName,
+              address: companyData.newCompanyAddress,
+              organization_number: companyData.newOrganizationNumber
+            }])
+            .select()
+            .single();
+            
+          if (companyError) {
+            toast({
+              title: "Company creation failed",
+              description: companyError.message,
+              variant: "destructive",
+            });
+            return { error: companyError };
+          }
+
+          if (!companyData?.id) {
+            const companyIdError = new Error("Company creation failed - no company ID returned");
+            toast({
+              title: "Company creation failed",
+              description: companyIdError.message,
+              variant: "destructive",
+            });
+            return { error: companyIdError };
+          }
+
+          // Update user profile with new company
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              company_id: companyData.id,
+              is_company_admin: true
+            })
+            .eq('id', userId);
+            
+          if (profileError) {
+            if (profileError.code === '42501') {
+              toast({
+                title: "Permission denied",
+                description: "Unable to update profile. Please try again or contact support.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Profile update failed",
+                description: profileError.message,
+                variant: "destructive",
+              });
+            }
+            return { error: profileError };
+          }
+
+        } else if (companyData.companyAction === "join") {
+          // Join existing company
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              company_id: companyData.existingCompanyId,
+              is_company_admin: false
+            })
+            .eq('id', userId);
+            
+          if (profileError) {
+            if (profileError.code === '42501') {
+              toast({
+                title: "Permission denied",
+                description: "Unable to update profile. Please try again or contact support.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Profile update failed",
+                description: profileError.message,
+                variant: "destructive",
+              });
+            }
+            return { error: profileError };
+          }
+        }
+
+        toast({
+          title: "Registration successful",
+          description: "Please check your email to confirm your account.",
+        });
+        
+        return { error: null, userId };
+        
+      } catch (companySetupError: any) {
+        toast({
+          title: "Company setup failed",
+          description: companySetupError.message,
+          variant: "destructive",
+        });
+        return { error: companySetupError };
+      }
+      
     } catch (error: any) {
       toast({
         title: "Unexpected error",
@@ -156,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     signUp,
+    signUpAndSetupCompany,
     signIn,
     signOut,
     checkCompanyAssociation

@@ -50,7 +50,6 @@ const App = () => (
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/company-registration" element={<CompanyRegistration />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/contact" element={<Contact />} />
