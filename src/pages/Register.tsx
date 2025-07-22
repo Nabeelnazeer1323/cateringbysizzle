@@ -23,8 +23,15 @@ const Register = () => {
   const { signUpAndSetupCompany, user } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user) {
+      navigate("/order");
+    }
+  }, [user, navigate]);
+
   const form = useForm<RegisterFormValues>({
-    navigate("/order");
+    resolver: zodResolver(registerFormSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
