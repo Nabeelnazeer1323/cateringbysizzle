@@ -87,10 +87,10 @@ const Register = () => {
 
       if (error) {
         setIsLoading(false);
-        navigate("/order");
+        return;
       }
 
-      navigate("/company-registration");
+      navigate("/order");
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
