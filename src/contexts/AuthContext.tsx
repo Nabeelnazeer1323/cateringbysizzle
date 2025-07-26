@@ -290,6 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    setLoading(true);
     try {
       await supabase.auth.signOut();
       toast({
@@ -311,6 +312,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           variant: "destructive",
         });
       }
+    } finally {
+      setLoading(false);
     }
   };
 
