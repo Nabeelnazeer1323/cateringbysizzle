@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (companyData.companyAction === "create") {
           // Create new company
-          const { data: companyData, error: companyError } = await supabase
+          const { data: newCompanyData, error: companyError } = await supabase
             .from('companies')
             .insert([{
               name: companyData.newCompanyName,
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { error: companyError };
           }
 
-          if (!companyData?.id) {
+          if (!newCompanyData?.id) {
             const companyIdError = new Error("Company creation failed - no company ID returned");
             toast({
               title: "Company creation failed",
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { error: profileError } = await supabase
             .from('profiles')
             .update({
-              company_id: companyData.id,
+              company_id: newCompanyData.id,
               is_company_admin: true
             })
             .eq('id', userId);
