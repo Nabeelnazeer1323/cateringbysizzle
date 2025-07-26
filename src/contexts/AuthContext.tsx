@@ -297,11 +297,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "You have been successfully logged out.",
       });
     } catch (error: any) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Check if the error is due to session not found (user already logged out)
+      if (error.message && error.message.includes('session_not_found')) {
+        // Treat as successful logout since session is already invalidated
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+      } else {
+        toast({
+          title: "Error signing out",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     }
   };
 
