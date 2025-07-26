@@ -275,6 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
+        duration: 2000,
       });
       
       return { error: null };
